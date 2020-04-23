@@ -7,4 +7,4 @@ pip install tkinter
 pip install pillow
 pip install requests
 ```
-## 测试测试
+## 下载后用PyCharm直接运行就可以了

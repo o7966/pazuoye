@@ -22,14 +22,15 @@ imgurl='https://weixin.zijinshe.com/cms/upload/cover/p1685.png'
 root = Tk()
 root.title('练习册下载器')
 root.geometry('640x530')
+root.iconbitmap('./logo.ico')
 # -------创建窗体------
 
 # -------创建下拉框Combobox，只读-------
 cmb1 = Combobox(root,state='readonly',width=30)
 cmb2 = Combobox(root,state='readonly',width=30)
 cmb3 = Combobox(root,state='readonly',width=30)
-cmb1['value']=('一年级','二年级','三年级','四年级','五年级','六年级')
-cmb2['value']=('数学','语文','英语')
+cmb1['value']=('一年级','二年级','三年级','四年级','五年级','六年级','七年级','八年级','九年级')
+cmb2['value']=('数学','语文','英语','课本')
 cmb3['value']=('上半学期','下半学期')
 # Combobox默认选项
 cmb1.current(0)
@@ -85,15 +86,22 @@ imglabel.grid(row=3,column=2)
 # 获取教材列表函数
 def huoquliebiao(nianji,kemu,xueqi):
     global json1
-    url = 'https://weixin.zijinshe.com/cms/upload/site/book-list/wb_lxc_grade_'+str(nianji)+'_course_'+str(kemu)+'_volume_'+str(xueqi)+'.json'
-    response = requests.get(url, headers=headers)
-    json1=response.json()
-    json1 = sorted(json1, key=lambda x: x["version"])
+    url = "https://weixin.zijinshe.com/cms/upload/site/book-list/wb_lxc_grade_{}_course_{}_volume_{}.json".format(str(nianji),str(kemu),str(xueqi))
+    # 课本下载URL：https://weixin.zijinshe.com/cms/upload/site/book-list/wb_kb_grade_5_volume_2.json
+    url2 = "https://weixin.zijinshe.com/cms/upload/site/book-list/wb_kb_grade_{}_volume_{}.json".format(str(nianji),str(xueqi))
     # print(type(json1))
     # print(type(json1[0]))
     # print(json1[0])
     # print(url)
     lb.delete(0,END)
+    if kemu==4:
+        response2 = requests.get(url2, headers=headers)
+        json1=response2.json()
+        json1 = sorted(json1, key=lambda x: x["version"])
+    else:
+        response = requests.get(url, headers=headers)
+        json1 = response.json()
+        json1 = sorted(json1, key=lambda x: x["version"])
     for json in json1:
         # print("版本是：{}。名称是：{}。id是：{}。".format(json['version'],json["name"],json["id"]))
         lb.insert(END,"{}.{}.{}.".format(json['version'],json["name"],json["id"]))
@@ -105,12 +113,10 @@ def huoqutushu():
     kemu = cmb2.current()+1
     xueqi = cmb3.current()+1
     # print(cmb1.current()+1)
-    # print(cmb2.current()+1)
     # print(cmb3.current()+1)
     huoquliebiao(nianji,kemu,xueqi)
     # print(type(cmb1.current()))
 # huoquliebiao(1,1,1)
-# 定义按钮执行函数
 but1 = Button(root,text='获取教材列表',command=huoqutushu)
 but1.grid(row=5,column=0)
 # -------获取教材列表按钮组件-------
@@ -125,13 +131,13 @@ def selectPath():
 
 # 保存地址
 save_add = Label(root, text='保存到:')
-save_add.grid(row=6,column=0)
+save_add.grid(row=7,column=0)
 # 输入地址
 save_entry = Entry(root, width=40, textvariable=path)
-save_entry.grid(row=7,column=0)
+save_entry.grid(row=8,column=0)
 # 选择地址按钮
 path_choose = Button(root, text='选择文件夹', command=selectPath)
-path_choose.grid(row=7,column=1)
+path_choose.grid(row=8,column=1)
 # -------定义文件夹选择-------
 
 # -------定义下载按钮-------
@@ -176,18 +182,69 @@ def is_entry_right():
 
 # 定义开始下载按钮
 download=Button(root,text='下载',command=is_entry_right)
-download.grid(row=8,column=1)
+download.grid(row=9,column=1)
 # -------定义下载按钮-------
 
 # -------定义下载进度条-------
 # 进度条http://www.voidcn.com/article/p-uohzmvuy-bug.html
 # https://blog.csdn.net/Speechless_/article/details/84941810
 progress=Progressbar(root,maximum=100,orient=HORIZONTAL,length=285,mode='determinate')
-progress.grid(row=8,column=0)
+progress.grid(row=9,column=0)
 # 定义下载进度和数量
 shuliang=Label(root)
-shuliang.grid(row=8,column=0)
+shuliang.grid(row=9,column=0)
 # -------定义下载进度条-------
+
+# 由于tkinter(提示功能)中没有ToolTip功能，所以自定义这个功能如下
+class ToolTip(object):
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.id = None
+        self.x = self.y = 0
+
+    def showtip(self, text):
+        "Display text in tooltip window"
+        self.text = text
+        if self.tipwindow or not self.text:
+            return
+        x, y, _cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 27
+        y = y + cy + self.widget.winfo_rooty() + 27
+        self.tipwindow = tw = Toplevel(self.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+
+        label = Label(tw, text=self.text, justify=LEFT,
+                         background="#ffffe0", relief=SOLID, borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
+# ===================================================================
+def createToolTip(widget, text):
+    toolTip = ToolTip(widget)
+    def enter(event):
+        toolTip.showtip(text)
+    def leave(event):
+        toolTip.hidetip()
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+# -------分隔符-------
+s = Separator(root,orient = HORIZONTAL)
+s.grid(row=6,column=0,sticky = W+E)
+# -------分隔符-------
+
+# Add Tooltip
+createToolTip(cmb1, '选择年级.')
+createToolTip(cmb2, '选择科目.')
+createToolTip(cmb3, '选择学期.')
 
 # 主循环
 root.mainloop()
