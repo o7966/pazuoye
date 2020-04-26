@@ -9,4 +9,4 @@ pip install requests
 ```
 ## 下载后用PyCharm直接运行就可以了
 
-![](.\image\2020-04-26_144131.png)
+![](./image/2020-04-26_144131.png)
