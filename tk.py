@@ -14,15 +14,16 @@ import os
 
 json1=[]
 headers = {
-    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.9(0x17000929) NetType/WIFI Language/zh_CN",
+    # "Referer": "https://weixin.zijinshe.com/cms/webapp/home/answer/index.html"
 }
-imgurl='https://weixin.zijinshe.com/cms/upload/cover/p1685.png'
+imgurl=''
 
 # -------创建窗体------
 root = Tk()
 root.title('练习册下载器')
 root.geometry('640x530')
-root.iconbitmap('./logo.ico')
+# root.iconbitmap('./logo.ico')
 # -------创建窗体------
 
 # -------创建下拉框Combobox，只读-------
