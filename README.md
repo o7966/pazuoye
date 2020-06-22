@@ -1,5 +1,8 @@
 # pazuoye
 爬出孩子练习册答案1到9年级
+
+dist目录中是可以直接运行的exe程序。
+
 ## 安装所需库
 ```bash
 pip install lxml
