@@ -11,8 +11,9 @@ from io import BytesIO
 import requests
 from lxml import etree
 import os
+import time
 
-json1=[]
+json1 = []
 headers = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.9(0x17000929) NetType/WIFI Language/zh_CN",
     # "Referer": "https://weixin.zijinshe.com/cms/webapp/home/answer/index.html"
@@ -156,14 +157,14 @@ def pachong():
     response = requests.get(url, headers=headers)
     html = response.text.encode('iso-8859-1').decode('utf8')
     # print(html)
-    html=etree.HTML(html)
+    html = etree.HTML(html)
     html_data2 = html.xpath('//div[@class="row"]//button/@id')
     url1 = "http://weixin.zijinshe.com/cms/upload/page/"
     for i in range(len(html_data2)):
         # 更新下载进度条和下载数量
-        progress["value"]=(i+1)/len(html_data2)*100
+        progress["value"] = (i+1)/len(html_data2)*100
         progress.update()
-        shuliang["text"]="{}/{}".format(i+1,len(html_data2))
+        shuliang["text"] = "{}/{}".format(i+1,len(html_data2))
         html_data2[i] = url1 + html_data2[i][2:] + '.jpg'
         # print(html_data2[i])
         r = requests.get(html_data2[i], headers=headers)
@@ -176,8 +177,11 @@ def pachong():
 
 # 定义检测是否选择教材和正确路径函数
 def is_entry_right():
-    if  lb.curselection() and os.path.exists(save_entry.get()):
+    if lb.curselection() and os.path.exists(save_entry.get()):
+        start = time.time()
         pachong()
+        stop = time.time()
+        print(stop-start)
     else:
         tkinter.messagebox.showwarning('wrong!', '请选择教材和路径！')
 
