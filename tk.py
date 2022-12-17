@@ -1,4 +1,6 @@
 """
+    2022-12-16
+    跟随资源站点修改代码逻辑。
     2020-4-21
     给孩子下载联系册答案。0.2整理了代码结构。
 """
@@ -9,16 +11,43 @@ from tkinter.ttk import *
 from PIL import Image,ImageTk
 from io import BytesIO
 import requests
-from lxml import etree
 import os
 import time
+from json import JSONDecoder,JSONDecodeError
+import re
+import base64
 
-json1 = []
+
 headers = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.9(0x17000929) NetType/WIFI Language/zh_CN",
-    # "Referer": "https://weixin.zijinshe.com/cms/webapp/home/answer/index.html"
+    # "Referer": "https://weixin.zijinshe.com/cms/webapp/home/answer/index.html",
+    "Origin": "https://weixin.zijinshe.com"
 }
+# 一个全局变量用来接受教材封面
 imgurl=''
+
+# 解析课程列表Json函数
+NOT_WHITESPACE=re.compile(r'[^\s]')
+def decode_stacked(document,pos=0,decoder=JSONDecoder()):
+    while True:
+        match = NOT_WHITESPACE.search(document,pos)
+        if not match:
+            return
+        pos=match.start()
+
+        try:
+            obj,pos = decoder.raw_decode(document,pos)
+        except JSONDecodeError:
+            raise
+        yield  obj
+
+# 年级、科目、上下册，返回base64后查询语句。
+def get_select(grades,course,volume):
+    select1="""SELECT * FROM ossobject [*] o WHERE o.book.gradesStr like  '%{},%' \
+AND o.book.course in ('{}') AND o.book.volume in  ('{}','3') \
+AND o.book.category in  ('keben','jiaofu','keben_answer','jiaofu_answer')""".format(grades,course,volume)
+    select1_base64=base64.b64encode(select1.encode())
+    return select1_base64
 
 # -------创建窗体------
 root = Tk()
@@ -32,7 +61,7 @@ cmb1 = Combobox(root,state='readonly',width=30)
 cmb2 = Combobox(root,state='readonly',width=30)
 cmb3 = Combobox(root,state='readonly',width=30)
 cmb1['value']=('一年级','二年级','三年级','四年级','五年级','六年级','七年级','八年级','九年级')
-cmb2['value']=('数学','语文','英语','课本')
+cmb2['value']=('数学','语文','英语','物理','化学','生物','历史','道德与法制')
 cmb3['value']=('上半学期','下半学期')
 # Combobox默认选项
 cmb1.current(0)
@@ -55,18 +84,17 @@ lb.grid(row=3,column=0,padx=15,pady=5)
 # 更新滚动条
 y_scroll.config(command=lb.yview)
 x_scroll.config(command=lb.xview)
+
 # 创建列表框双击显示图片函数
-def printlist(event):
+def printlist():
+    url="https://prd.oss.leziedu.com/"
     global imgurl
     # print(lb.curselection())
     v = lb.curselection()
     # 元祖转换为列表
     i= list(v)
-    # print(type(v))
-    # # 列表转数字
-    # print(json1[i[0]])
-    # print(json1[i[0]]["cover"])
-    imgurl = json1[i[0]]["cover"]
+    # list1[i[0]] 列表转换成字符
+    imgurl = "{}{}".format(url,list1[i[0]]["thumbCoverPath"])
     # print(imgurl)
     # 定义图片可以显示在Label中
     imgreq = requests.get(imgurl, headers=headers)
@@ -75,8 +103,21 @@ def printlist(event):
     # 动态更新标签中图片https://www.jb51.net/article/162969.htm
     imglabel.config(image=tk_image)
     imglabel.image=tk_image #keep a reference!
+
+
+# 判断列表框是否为空
+def is_listbox_right(event):
+    if lb.curselection() and lb.get(0):
+        printlist()
+    else:
+        tkinter.messagebox.showwarning('wrong!', '没有找到教材,重新选择！')
+
+
 # 绑定双击列表事件
-lb.bind('<Double-Button-1>',printlist)
+lb.bind('<Double-Button-1>', is_listbox_right)
+
+
+
 # -------创建列表框Listbox-------
 
 # -------创建Label标签展示练习册封面-------
@@ -86,40 +127,40 @@ imglabel.grid(row=3,column=2)
 
 # -------获取教材列表按钮组件-------
 # 获取教材列表函数
+
 def huoquliebiao(nianji,kemu,xueqi):
-    global json1
-    url = "https://weixin.zijinshe.com/cms/upload/site/book-list/wb_lxc_grade_{}_course_{}_volume_{}.json".format(str(nianji),str(kemu),str(xueqi))
-    # 课本下载URL：https://weixin.zijinshe.com/cms/upload/site/book-list/wb_kb_grade_5_volume_2.json
-    url2 = "https://weixin.zijinshe.com/cms/upload/site/book-list/wb_kb_grade_{}_volume_{}.json".format(str(nianji),str(xueqi))
-    # print(type(json1))
-    # print(type(json1[0]))
-    # print(json1[0])
-    # print(url)
-    lb.delete(0,END)
-    if kemu==4:
-        response2 = requests.get(url2, headers=headers)
-        json1=response2.json()
-        json1 = sorted(json1, key=lambda x: x["version"])
-    else:
-        response = requests.get(url, headers=headers)
-        json1 = response.json()
-        json1 = sorted(json1, key=lambda x: x["version"])
-    for json in json1:
-        # print("版本是：{}。名称是：{}。id是：{}。".format(json['version'],json["name"],json["id"]))
-        lb.insert(END,"{}.{}.{}.".format(json['version'],json["name"],json["id"]))
-    # print(json1[0].get('name'))
+    global list1
+    list1=[]
+    select1=get_select(nianji,kemu,xueqi).decode("utf-8")
+    url="https://zijinshe-common-object.oss-cn-shenzhen.aliyuncs.com/basicbook/wx43cddada7b553cec/bookListInfo_toolBook.json?x-oss-process=json%2Fselect"
+    body_data="""<SelectRequest><Expression>{}</Expression>
+      <OutputSerialization>
+      <JSON>
+          </JSON>
+          <OutputRawData>true</OutputRawData></OutputSerialization>
+    </SelectRequest>""".format(select1)
+    # print(body_data)
+    req1=requests.post(url=url,data=body_data,headers=headers)
+    # print(req1.text)
+    lb.delete(0, END)
+    req1json=decode_stacked(req1.text)
+    for obj in req1json:
+        list1.append(obj["book"])
+        lb.insert(END, "{}.{}.".format(obj["book"]["fullName"], obj["book"]["id"]))
+
 
 # 列表选取函数
 def huoqutushu():
+    # kemu={'数学':1,'语文':2,'英语':3,'物理':5,'化学':6,'生物':7,历史':9,'道德与法制':14}
+    kemu_jihe=[1,2,3,5,6,7,9,14]
     nianji= cmb1.current()+1
-    kemu = cmb2.current()+1
+    kemu = kemu_jihe[cmb2.current()]
     xueqi = cmb3.current()+1
-    # print(cmb1.current()+1)
-    # print(cmb3.current()+1)
     huoquliebiao(nianji,kemu,xueqi)
     # print(type(cmb1.current()))
-# huoquliebiao(1,1,1)
 but1 = Button(root,text='获取教材列表',command=huoqutushu)
+
+
 but1.grid(row=5,column=0)
 # -------获取教材列表按钮组件-------
 
@@ -144,36 +185,59 @@ path_choose.grid(row=8,column=1)
 
 # -------定义下载按钮-------
 # 定义实际下载和保存位置函数
+def get_target_value(key,dic,tmp_list):
+    """
+    :param key: 目标key值
+    :param dic: Json数据
+    :param tmp_list: 储存获取的数据
+    :return: list
+    """
+    if not isinstance(tmp_list,list):
+        err="tmp_list: 参数类型错误！"
+        return err
+    if isinstance(dic,(list,tuple)):
+        for v in dic:
+            get_target_value(key,v,tmp_list)
+    elif isinstance(dic,dict):
+        if key in dic.keys():
+            tmp_list.append(dic[key])
+        for value in dic.values():
+            get_target_value(key,value,tmp_list)
+    return tmp_list
+
+
 def pachong():
-    # 还没有写判断是否为空路径，例子在https://blog.csdn.net/weixin_42183408/article/details/88379191
-    path = save_entry.get()
-    kid = list(lb.curselection())
-    jid=json1[kid[0]]["id"]
-    url='http://weixin.zijinshe.com/cms/upload/site/book/{}.html'.format(jid)
-    fengmianurl=json1[kid[0]]["cover"]
-    # print(url)
-    # print(path)
-    # print(headers)
-    response = requests.get(url, headers=headers)
-    html = response.text.encode('iso-8859-1').decode('utf8')
-    # print(html)
-    html = etree.HTML(html)
-    html_data2 = html.xpath('//div[@class="row"]//button/@id')
-    url1 = "http://weixin.zijinshe.com/cms/upload/page/"
-    for i in range(len(html_data2)):
-        # 更新下载进度条和下载数量
-        progress["value"] = (i+1)/len(html_data2)*100
+    res=[]
+    v = lb.curselection()
+    i= list(v)
+    # print(len(list1))
+    jsonurl = "https://prd.oss.leziedu.com/basicbook/wx43cddada7b553cec/{}_bookInfo.json".format(list1[i[0]]["id"])
+    baseurl = "https://prd.oss.leziedu.com/"
+    # print(jsonurl)
+    # 解析成字典
+    req=requests.get(url=jsonurl,headers=headers)
+    # print(type(req.json()))
+    dict1=req.json()
+    # print(dict1)
+    get_target_value("answerPicPath", dict1, res)
+    # print(res)
+    for i in range(len(res)):
+#         # 更新下载进度条和下载数量
+        progress["value"] = (i+1)/len(res)*100
         progress.update()
-        shuliang["text"] = "{}/{}".format(i+1,len(html_data2))
-        html_data2[i] = url1 + html_data2[i][2:] + '.jpg'
-        # print(html_data2[i])
-        r = requests.get(html_data2[i], headers=headers)
-        f = open(path+'\\'+str(i+1).zfill(3)+ '.jpg','wb')
+        shuliang["text"] = "{}/{}".format(i+1,len(res))
+        res[i] = "{}{}".format(baseurl,res[i])
+        # print(res[i])
+        r = requests.get(res[i], headers=headers)
+        # print(type(i))
+        # print(path.get())
+        f = open("{}/{}.jpg".format(path.get(),str(i+1).zfill(3)),'wb')
         f.write(r.content)
         # print("第%d张图片下载完毕" % (i + 1))
-    r = requests.get(fengmianurl,headers=headers)
-    f = open(path + '\\' + 'fengmian.jpg', 'wb')
+    r = requests.get(imgurl,headers=headers)
+    f = open("{}/fengmian.jpg".format(path.get()), 'wb')
     f.write(r.content)
+
 
 # 定义检测是否选择教材和正确路径函数
 def is_entry_right():
