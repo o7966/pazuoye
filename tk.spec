@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['tk_t.py'],
+    ['tk.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -28,7 +28,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='tk_t',
+    name='tk',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
